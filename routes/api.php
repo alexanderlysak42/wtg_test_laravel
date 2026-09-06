@@ -1,8 +1,8 @@
 <?php
 
 use App\Http\Controllers\API\ImportController;
-use App\Http\Controllers\Api\PropertyController;
-use App\Http\Controllers\Api\ReservationController;
+use App\Http\Controllers\API\PropertyController;
+use App\Http\Controllers\API\ReservationController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('imports', [ImportController::class, 'store']);
