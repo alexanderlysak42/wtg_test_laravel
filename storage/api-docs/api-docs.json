@@ -1,0 +1,540 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "WTG Test API",
+        "description": "WTG Test API documentation",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8080",
+            "description": "Локальне Docker-оточення"
+        }
+    ],
+    "paths": {
+        "/api/imports": {
+            "post": {
+                "tags": [
+                    "Imports"
+                ],
+                "summary": "Поставити імпорт пропозицій в чергу на обробку",
+                "operationId": "647214ef54e3e0fe3738102b6f4583e3",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "supplier",
+                                    "external_import_id",
+                                    "sent_at",
+                                    "offers"
+                                ],
+                                "properties": {
+                                    "supplier": {
+                                        "type": "string",
+                                        "example": "supplier-a"
+                                    },
+                                    "external_import_id": {
+                                        "type": "string",
+                                        "example": "import-2026-09-01-001"
+                                    },
+                                    "sent_at": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2026-09-01T10:00:00Z"
+                                    },
+                                    "offers": {
+                                        "type": "array",
+                                        "items": {
+                                            "required": [
+                                                "external_id",
+                                                "property",
+                                                "check_in",
+                                                "check_out",
+                                                "max_guests",
+                                                "price",
+                                                "currency",
+                                                "available_units",
+                                                "expires_at"
+                                            ],
+                                            "properties": {
+                                                "external_id": {
+                                                    "type": "string",
+                                                    "example": "offer-a-10001"
+                                                },
+                                                "property": {
+                                                    "required": [
+                                                        "code",
+                                                        "name",
+                                                        "city"
+                                                    ],
+                                                    "properties": {
+                                                        "code": {
+                                                            "type": "string",
+                                                            "example": "BCN-0001"
+                                                        },
+                                                        "name": {
+                                                            "type": "string",
+                                                            "example": "Apartment near Sagrada Familia"
+                                                        },
+                                                        "city": {
+                                                            "type": "string",
+                                                            "example": "Barcelona"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "check_in": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "example": "2026-10-10"
+                                                },
+                                                "check_out": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "example": "2026-10-15"
+                                                },
+                                                "max_guests": {
+                                                    "type": "integer",
+                                                    "example": 4
+                                                },
+                                                "price": {
+                                                    "description": "Ціна в мінімальних одиницях валюти (центах)",
+                                                    "type": "integer",
+                                                    "example": 72500
+                                                },
+                                                "currency": {
+                                                    "type": "string",
+                                                    "example": "EUR"
+                                                },
+                                                "available_units": {
+                                                    "type": "integer",
+                                                    "example": 2
+                                                },
+                                                "expires_at": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2026-09-10T23:59:59Z"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "Імпорт прийнято і поставлено в чергу (або вже існував — ідемпотентний повтор)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 15
+                                                },
+                                                "status": {
+                                                    "type": "string",
+                                                    "example": "pending"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Помилка валідації або невідомий supplier"
+                    }
+                }
+            }
+        },
+        "/api/imports/{import}": {
+            "get": {
+                "tags": [
+                    "Imports"
+                ],
+                "summary": "Отримати поточний статус асинхронного імпорту",
+                "operationId": "8b7beaac01a18f5f947ac47ba8fd45f4",
+                "parameters": [
+                    {
+                        "name": "import",
+                        "in": "path",
+                        "description": "ID імпорту",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Поточний стан імпорту",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 15
+                                                },
+                                                "supplier": {
+                                                    "type": "string",
+                                                    "example": "supplier-a"
+                                                },
+                                                "external_import_id": {
+                                                    "type": "string",
+                                                    "example": "import-2026-09-01-001"
+                                                },
+                                                "sent_at": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2026-09-01T10:00:00Z"
+                                                },
+                                                "status": {
+                                                    "type": "string",
+                                                    "example": "completed",
+                                                    "enum": [
+                                                        "pending",
+                                                        "processing",
+                                                        "completed",
+                                                        "failed"
+                                                    ]
+                                                },
+                                                "total_offers": {
+                                                    "type": "integer",
+                                                    "example": 20
+                                                },
+                                                "processed_offers": {
+                                                    "type": "integer",
+                                                    "example": 20
+                                                },
+                                                "error": {
+                                                    "type": "string",
+                                                    "example": null,
+                                                    "nullable": true
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2026-09-01T10:00:02Z"
+                                                },
+                                                "completed_at": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2026-09-01T10:00:04Z",
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Імпорт з таким ID не знайдено"
+                    }
+                }
+            }
+        },
+        "/api/properties": {
+            "get": {
+                "tags": [
+                    "Properties"
+                ],
+                "summary": "Знайти актуальні об'єкти житла з найдешевшою пропозицією на кожен",
+                "operationId": "6e387a77d712ad025ae4dbbe58f9de35",
+                "parameters": [
+                    {
+                        "name": "city",
+                        "in": "query",
+                        "description": "Фільтр за містом",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Barcelona"
+                        }
+                    },
+                    {
+                        "name": "check_in",
+                        "in": "query",
+                        "description": "Дата заїзду",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-10-10"
+                        }
+                    },
+                    {
+                        "name": "check_out",
+                        "in": "query",
+                        "description": "Дата виїзду (пізніше за check_in)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-10-15"
+                        }
+                    },
+                    {
+                        "name": "guests",
+                        "in": "query",
+                        "description": "Кількість гостей (за замовчуванням 1)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Номер сторінки",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Розмір сторінки (за замовчуванням 15, максимум 100)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список об'єктів житла з найдешевшою актуальною пропозицією на кожен",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "code": {
+                                                        "type": "string",
+                                                        "example": "BCN-0001"
+                                                    },
+                                                    "name": {
+                                                        "type": "string",
+                                                        "example": "Apartment near Sagrada Familia"
+                                                    },
+                                                    "city": {
+                                                        "type": "string",
+                                                        "example": "Barcelona"
+                                                    },
+                                                    "best_offer": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer",
+                                                                "example": 125
+                                                            },
+                                                            "supplier": {
+                                                                "type": "string",
+                                                                "example": "supplier-a"
+                                                            },
+                                                            "price": {
+                                                                "description": "Ціна в мінімальних одиницях валюти (центах)",
+                                                                "type": "integer",
+                                                                "example": 72500
+                                                            },
+                                                            "currency": {
+                                                                "type": "string",
+                                                                "example": "EUR"
+                                                            },
+                                                            "available_units": {
+                                                                "type": "integer",
+                                                                "example": 2
+                                                            },
+                                                            "expires_at": {
+                                                                "type": "string",
+                                                                "format": "date-time",
+                                                                "example": "2026-09-10T23:59:59Z"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object"
+                                        },
+                                        "meta": {
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "example": 15
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Помилка валідації параметрів пошуку (відсутні або некоректні check_in/check_out)"
+                    }
+                }
+            }
+        },
+        "/api/offers/{offer}/reservations": {
+            "post": {
+                "tags": [
+                    "Reservations"
+                ],
+                "summary": "Забронювати пропозицію",
+                "operationId": "d07edeb7733fc14383f9995ce65a9f34",
+                "parameters": [
+                    {
+                        "name": "offer",
+                        "in": "path",
+                        "description": "ID пропозиції",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 125
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "client_reference",
+                                    "customer_name",
+                                    "customer_email"
+                                ],
+                                "properties": {
+                                    "client_reference": {
+                                        "type": "string",
+                                        "example": "web-order-9f782b1c"
+                                    },
+                                    "customer_name": {
+                                        "type": "string",
+                                        "example": "John Smith"
+                                    },
+                                    "customer_email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "john@example.com"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Бронювання успішно створено",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 7
+                                                },
+                                                "offer_id": {
+                                                    "type": "integer",
+                                                    "example": 125
+                                                },
+                                                "client_reference": {
+                                                    "type": "string",
+                                                    "example": "web-order-9f782b1c"
+                                                },
+                                                "customer_name": {
+                                                    "type": "string",
+                                                    "example": "John Smith"
+                                                },
+                                                "customer_email": {
+                                                    "type": "string",
+                                                    "example": "john@example.com"
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2026-09-01T10:05:00Z"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Пропозицію з таким ID не знайдено"
+                    },
+                    "409": {
+                        "description": "Вільних місць на цю пропозицію не залишилось"
+                    },
+                    "422": {
+                        "description": "Помилка валідації даних бронювання"
+                    }
+                }
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Imports",
+            "description": "Imports"
+        },
+        {
+            "name": "Properties",
+            "description": "Properties"
+        },
+        {
+            "name": "Reservations",
+            "description": "Reservations"
+        }
+    ]
+}
