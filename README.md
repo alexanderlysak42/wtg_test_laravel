@@ -1,59 +1,117 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# WTG Test API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+REST API на Laravel
 
-## About Laravel
+Репозиторій: https://github.com/alexanderlysak42/wtg_test_laravel
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Стек
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- PHP 8.3
+- Laravel 12
+- MySQL 8
+- Redis (черга)
+- Docker / Docker Compose
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Основні сутності
 
-## Learning Laravel
+| Сутність      | Опис                                                 |
+|---------------|------------------------------------------------------|
+| `Supplier`    | Постачальник пропозицій (`supplier-a`, `supplier-b`) |
+| `Property`    | Об'єкт житла, унікальний за `code`                   |
+| `Offer`       | Пропозиція постачальника на конкретні дати           |
+| `Import`      | Факт запиту на імпорт та його статус                 |
+| `Reservation` | Бронювання конкретної пропозиції                     |
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## Встановлення та запуск
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Проєкт розгортається через Docker - окремо встановлювати PHP/MySQL/Redis на хості не
+потрібно.
 
-## Laravel Sponsors
+```bash
+git clone https://github.com/alexanderlysak42/wtg_test_laravel.git
+cd wtg_test_laravel
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+cp .env.example .env
+```
 
-### Premium Partners
+У `.env` потрібно заповнити `DB_PASSWORD` та `DB_ROOT_PASSWORD`.
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+```bash
+docker compose up -d --build
 
-## Contributing
+docker compose exec app composer install
+docker compose exec app php artisan key:generate
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Міграції та сидери
 
-## Code of Conduct
+```bash
+docker compose exec app php artisan migrate --seed
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Сидер (`SupplierSeeder`) створює двох постачальників: `supplier-a`, `supplier-b`.
 
-## Security Vulnerabilities
+Тестова база даних для feature-тестів (`wtg_test_testing`) створюється автоматично при першому
+старті контейнера MySQL (init-скрипт `docker/mysql/init/`), вручну нічого робити не потрібно.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Черга
 
-## License
+Обробка імпорту виконується асинхронно всередині `Job` (`ProcessImportJob`), а не в
+HTTP-запиті. Воркер вже запущений як окремий сервіс `queue` у `docker-compose.yaml`
+(`php artisan queue:work`).
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+docker compose logs -f queue
+docker compose restart queue
+```
+
+## Тести
+
+```bash
+docker compose exec app php artisan test
+```
+
+## API документація (Swagger)
+
+Після запуску контейнерів документація доступна за адресою:
+
+```
+http://localhost:8080/api/documentation
+```
+
+Перегенерувати документацію:
+
+```bash
+docker compose exec app php artisan l5-swagger:generate
+```
+
+## Ендпоінти
+
+| Метод  | Шлях                               | Опис                                                              |
+|--------|------------------------------------|-------------------------------------------------------------------|
+| `POST` | `/api/imports`                     | Поставити імпорт пропозицій у чергу на обробку                    |
+| `GET`  | `/api/imports/{import}`            | Отримати поточний статус асинхронного імпорту                     |
+| `GET`  | `/api/properties`                  | Знайти актуальні об'єкти житла з найдешевшою пропозицією на кожен |
+| `POST` | `/api/offers/{offer}/reservations` | Забронювати пропозицію                                            |
+
+## Захист від повторного відправлення одного і того ж імпорту
+
+- Пара `(supplier, external_import_id)` унікальна на рівні БД (складений унікальний індекс у
+  таблиці `imports`). Повторна відправка того самого імпорту не створює другий запис і не ставить
+  повторне завдання в чергу, ендпоінт знаходить існуючий `Import` і повертає його поточний статус.
+- Пара `(supplier, offer.external_id)` унікальна в таблиці `offers`. При повторному імпорті
+  пропозиція з уже наявним `external_id` не дублюється, а оновлюється (пакетний `upsert()`).
+- `Property` ідентифікується за `code` і перевикористовується між імпортами (пакетний `upsert()`).
+- Уся обробка пропозицій одного імпорту обгорнута в одну транзакцію, при помилці на будь-якому
+  кроці відкочуються всі зміни цього імпорту, а не створюється частково оброблений стан.
+
+## Захист від подвійного бронювання останньої одиниці
+
+При створенні бронювання (`POST /api/offers/{offer}/reservations`) рядок `offers` читається
+всередині транзакції через `SELECT ... FOR UPDATE` (`Offer::lockForUpdate()`). MySQL/InnoDB
+ставить ексклюзивне блокування на цей рядок до кінця транзакції: якщо два запити одночасно
+намагаються забронювати ту саму пропозицію, другий чекає, поки перший не завершить
+транзакцію (`commit`/`rollback`), після цього читає вже актуальне значення
+`available_units`. Обидва запити ніколи не побачать одне й те саме "застаріле" число місць,
+при `available_units = 1` бронювання отримає лише один із двох запитів, другий
+отримає `409 Conflict`.
