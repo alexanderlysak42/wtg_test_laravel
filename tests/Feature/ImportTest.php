@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ImportStatusEnum;
 use App\Jobs\ProcessImportJob;
 use App\Models\Import;
 use App\Models\Supplier;
@@ -49,16 +50,54 @@ class ImportTest extends TestCase
 
     public function test_unknown_supplier_is_rejected(): void
     {
-        $response = $this->postJson('/api/imports', [
-            'supplier' => 'unknown-supplier',
-            'external_import_id' => 'import-002',
-            'sent_at' => '2026-09-01T10:00:00Z',
-            'offers' => [],
-        ]);
+        Queue::fake();
 
-        $response->assertStatus(422);
+        $payload = $this->samplePayload(new Supplier(['code' => 'unknown-supplier']), 'import-002');
+
+        $this->postJson('/api/imports', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('supplier')
+            ->assertJsonMissingValidationErrors('offers');
+
+        $this->assertSame(0, Import::query()->count());
+        Queue::assertNothingPushed();
     }
 
+    public function test_import_status_is_returned(): void
+    {
+        $supplier = Supplier::factory()->create(['code' => 'supplier-a']);
+
+        $import = Import::factory()->create([
+            'supplier_id' => $supplier->id,
+            'external_import_id' => 'import-2026-09-01-001',
+            'sent_at' => '2026-09-01 10:00:00',
+            'status' => ImportStatusEnum::COMPLETED,
+            'total_offers' => 20,
+            'processed_offers' => 20,
+            'completed_at' => '2026-09-01 10:00:04',
+        ]);
+
+        $this->getJson("/api/imports/{$import->id}")
+            ->assertOk()
+            ->assertJson([
+                'data' => [
+                    'id' => $import->id,
+                    'supplier' => 'supplier-a',
+                    'external_import_id' => 'import-2026-09-01-001',
+                    'status' => 'completed',
+                    'total_offers' => 20,
+                    'processed_offers' => 20,
+                    'error' => null,
+                ],
+            ])
+            ->assertJsonPath('data.sent_at', '2026-09-01T10:00:00.000000Z')
+            ->assertJsonPath('data.completed_at', '2026-09-01T10:00:04.000000Z');
+    }
+
+    public function test_unknown_import_returns_404(): void
+    {
+        $this->getJson('/api/imports/999999')->assertNotFound();
+    }
 
     private function samplePayload(Supplier $supplier, string $externalImportId): array
     {

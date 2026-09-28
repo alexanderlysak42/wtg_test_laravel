@@ -2,14 +2,11 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Exceptions\NoAvailableUnitsException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreReservationRequest;
 use App\Http\Resources\ReservationResource;
 use App\Models\Offer;
-use App\Models\Reservation;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 use OpenApi\Attributes as OA;
 
 class ReservationController extends Controller
@@ -54,31 +51,13 @@ class ReservationController extends Controller
                 )
             ),
             new OA\Response(response: 404, description: 'Пропозицію з таким ID не знайдено'),
-            new OA\Response(response: 409, description: 'Вільних місць на цю пропозицію не залишилось'),
+            new OA\Response(response: 409, description: 'Вільних місць на цю пропозицію не залишилось або термін дії пропозиції минув (expires_at)'),
             new OA\Response(response: 422, description: 'Помилка валідації даних бронювання'),
         ]
     )]
     public function store(StoreReservationRequest $request, Offer $offer): JsonResponse
     {
-        $data = $request->validated();
-
-        $reservation = DB::transaction(function () use ($offer, $data) {
-
-            $lockedOffer = Offer::whereKey($offer->id)->lockForUpdate()->firstOrFail();
-
-            if ($lockedOffer->available_units < 1) {
-                throw new NoAvailableUnitsException();
-            }
-
-            $lockedOffer->decrement('available_units');
-
-            return Reservation::create([
-                'offer_id' => $lockedOffer->id,
-                'client_reference' => $data['client_reference'],
-                'customer_name' => $data['customer_name'],
-                'customer_email' => $data['customer_email'],
-            ]);
-        });
+        $reservation = $offer->reserve($request->validated());
 
         return (new ReservationResource($reservation))
             ->response()

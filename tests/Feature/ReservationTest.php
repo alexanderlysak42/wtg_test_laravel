@@ -40,4 +40,23 @@ class ReservationTest extends TestCase
         $response->assertStatus(409);
         $this->assertDatabaseMissing('reservations', ['offer_id' => $offer->id]);
     }
+
+    public function test_reservation_fails_when_offer_expired(): void
+    {
+        $offer = Offer::factory()->create([
+            'available_units' => 2,
+            'expires_at' => now()->subMinute(),
+        ]);
+
+        $response = $this->postJson("/api/offers/{$offer->id}/reservations", [
+            'client_reference' => 'web-order-expired',
+            'customer_name' => 'Jane Doe',
+            'customer_email' => 'jane@example.com',
+        ]);
+
+        $response->assertStatus(409)
+            ->assertJsonPath('message', 'This offer has expired.');
+        $this->assertSame(2, $offer->fresh()->available_units);
+        $this->assertDatabaseMissing('reservations', ['offer_id' => $offer->id]);
+    }
 }
